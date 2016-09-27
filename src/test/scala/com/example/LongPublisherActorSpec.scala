@@ -45,15 +45,20 @@ class LongPublisherActorSpec(_system: ActorSystem) extends TestKit(_system) with
     import scala.concurrent.duration._
 
     val subscriber: LongSubscriber = new LongSubscriber()
-    val simple: ActorRef = flow.to(Sink.fromSubscriber(subscriber)).runWith(advertIdSource)
+//    val simple: ActorRef = flow.to(Sink.fromSubscriber(subscriber)).runWith(advertIdSource)
+
+    val actorRef: ActorRef = system.actorOf(Props[LongPublisherActor])
+    val longs: Vector[Long] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9)
+    actorRef ! Init(longs)
+
+    Source.fromPublisher(ActorPublisher[Long](actorRef)).via(flow).to(Sink.fromSubscriber(subscriber)).run()
+
     import akka.pattern.ask
 
     implicit val timeout = Timeout(15 seconds)
 
-    val longs: Vector[Long] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9)
-    simple ! Init(longs)
 
-    Await.result(simple ? Request(10), 15 seconds)
+    Await.result(actorRef ? Request(10), 15 seconds)
 
   }
 
