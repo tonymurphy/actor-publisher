@@ -40,8 +40,6 @@ class LongPublisherActorSpec(_system: ActorSystem) extends TestKit(_system) with
 
     val advertIdSource = Source.actorPublisher[Long](Props[LongPublisherActor])
 
-    println(s"${advertIdSource}")
-
     val flow: Flow[Long,Long,NotUsed] = Flow[Long].map(x => x * 2)
 
     import scala.concurrent.duration._
@@ -51,8 +49,6 @@ class LongPublisherActorSpec(_system: ActorSystem) extends TestKit(_system) with
     import akka.pattern.ask
 
     implicit val timeout = Timeout(15 seconds)
-
-//    subscriber.askForData()
 
     val longs: Vector[Long] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9)
     simple ! Init(longs)
@@ -138,7 +134,7 @@ class LongSubscriber extends Subscriber[Long] {
   override def onNext(e: Long): Unit = {
     println(s"adding $e")
     adverts :+ e
-    subscription.get.request(1)
+    askForData()
 
   }
 
