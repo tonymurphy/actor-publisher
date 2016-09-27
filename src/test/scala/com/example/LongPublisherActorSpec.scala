@@ -46,13 +46,15 @@ class LongPublisherActorSpec(_system: ActorSystem) extends TestKit(_system) with
 
     import scala.concurrent.duration._
 
-    val subscriber: Subscriber[Long] = new LongSubscriber()
+    val subscriber: LongSubscriber = new LongSubscriber()
     val simple: ActorRef = flow.to(Sink.fromSubscriber(subscriber)).runWith(advertIdSource)
     import akka.pattern.ask
 
     implicit val timeout = Timeout(15 seconds)
 
-    val longs: Vector[Long] = Vector(1, 2)
+//    subscriber.askForData()
+
+    val longs: Vector[Long] = Vector(1, 2, 3, 4, 5, 6, 7, 8, 9)
     simple ! Init(longs)
 
     Await.result(simple ? Request(10), 15 seconds)
@@ -79,7 +81,6 @@ class LongPublisherActor extends ActorPublisher[Long] {
       buf ++= elements
     }
     case r: Request => {
-      println(s"Deliver ${r}")
       deliver()
       sender() ! true
     }
@@ -94,7 +95,10 @@ class LongPublisherActor extends ActorPublisher[Long] {
     if(totalDemand > 0) {
       val (use, keep) = buf.splitAt(totalDemand.toInt)
       buf = keep
-      println(s"delivering ${use}")
+      if(use.length == 0) {
+        println("at end of buffer")
+        onComplete()
+      }
       use foreach onNext
     } else {
       println("total demand = 0")
@@ -122,6 +126,7 @@ class LongSubscriber extends Subscriber[Long] {
     } else {
       println(s"onSubscribe ${s}")
       subscription = Some(s)
+      askForData()
     }
   }
 
@@ -133,7 +138,12 @@ class LongSubscriber extends Subscriber[Long] {
   override def onNext(e: Long): Unit = {
     println(s"adding $e")
     adverts :+ e
+    subscription.get.request(1)
+
+  }
+
+  def askForData(): Unit = {
+    subscription.get.request(1)
   }
 
 }
-
